@@ -16,7 +16,7 @@ namespace Stateless.Reflection
 
             var ignoredTriggers = new List<IgnoredTransitionInfo>();
 
-            // stateRepresentation.TriggerBehaviours maps from TTrigger to ICollection<TriggerBehaviour>
+            // stateRepresentation.TriggerBehaviours maps from TTrigger to List<TriggerBehaviour>
             foreach (var triggerBehaviours in stateRepresentation.TriggerBehaviours)
             {
                 foreach (var item in triggerBehaviours.Value)

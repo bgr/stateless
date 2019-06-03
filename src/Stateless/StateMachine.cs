@@ -469,7 +469,7 @@ namespace Stateless
         /// is fired.
         /// </summary>
         /// <param name="unhandledTriggerAction">An action to call when an unhandled trigger is fired.</param>
-        public void OnUnhandledTrigger(Action<TState, TTrigger, ICollection<string>> unhandledTriggerAction)
+        public void OnUnhandledTrigger(Action<TState, TTrigger, List<string>> unhandledTriggerAction)
         {
             if (unhandledTriggerAction == null) throw new ArgumentNullException(nameof(unhandledTriggerAction));
             _unhandledTriggerAction = new UnhandledTriggerAction.Sync(unhandledTriggerAction);
@@ -563,7 +563,7 @@ namespace Stateless
             _triggerConfiguration.Add(trigger.Trigger, trigger);
         }
 
-        void DefaultUnhandledTriggerAction(TState state, TTrigger trigger, ICollection<string> unmetGuardConditions)
+        void DefaultUnhandledTriggerAction(TState state, TTrigger trigger, List<string> unmetGuardConditions)
         {
             var source = state;
             var representativeState = GetRepresentation(source);

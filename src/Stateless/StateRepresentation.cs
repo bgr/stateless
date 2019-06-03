@@ -10,16 +10,16 @@ namespace Stateless
         {
             readonly TState _state;
 
-            internal IDictionary<TTrigger, ICollection<TriggerBehaviour>> TriggerBehaviours { get; } = new Dictionary<TTrigger, ICollection<TriggerBehaviour>>();
-            internal ICollection<EntryActionBehavior> EntryActions { get; } = new List<EntryActionBehavior>();
-            internal ICollection<ExitActionBehavior> ExitActions { get; } = new List<ExitActionBehavior>();
-            internal ICollection<ActivateActionBehaviour> ActivateActions { get; } = new List<ActivateActionBehaviour>();
-            internal ICollection<DeactivateActionBehaviour> DeactivateActions { get; } = new List<DeactivateActionBehaviour>();
+            internal IDictionary<TTrigger, List<TriggerBehaviour>> TriggerBehaviours { get; } = new Dictionary<TTrigger, List<TriggerBehaviour>>();
+            internal List<EntryActionBehavior> EntryActions { get; } = new List<EntryActionBehavior>();
+            internal List<ExitActionBehavior> ExitActions { get; } = new List<ExitActionBehavior>();
+            internal List<ActivateActionBehaviour> ActivateActions { get; } = new List<ActivateActionBehaviour>();
+            internal List<DeactivateActionBehaviour> DeactivateActions { get; } = new List<DeactivateActionBehaviour>();
 
             StateRepresentation _superstate; // null
             bool active;
 
-            readonly ICollection<StateRepresentation> _substates = new List<StateRepresentation>();
+            readonly List<StateRepresentation> _substates = new List<StateRepresentation>();
             public TState InitialTransitionTarget { get; private set; } = default(TState);
 
             public StateRepresentation(TState state)
@@ -27,7 +27,7 @@ namespace Stateless
                 _state = state;
             }
 
-            internal ICollection<StateRepresentation> GetSubstates()
+            internal List<StateRepresentation> GetSubstates()
             {
                 return _substates;
             }
@@ -43,10 +43,12 @@ namespace Stateless
                     (Superstate != null && Superstate.TryFindHandler(trigger, args, out handler)));
             }
 
+            private readonly List<TriggerBehaviourResult> GARBAGELESS_TryFindLocalHandler = new List<TriggerBehaviourResult>();
+
             bool TryFindLocalHandler(TTrigger trigger, object[] args, out TriggerBehaviourResult handlerResult)
             {
                 // Get list of candidate trigger handlers
-                if (!TriggerBehaviours.TryGetValue(trigger, out ICollection<TriggerBehaviour> possible))
+                if (!TriggerBehaviours.TryGetValue(trigger, out List<TriggerBehaviour> possible))
                 {
                     handlerResult = null;
                     return false;
@@ -54,33 +56,83 @@ namespace Stateless
 
                 // Remove those that have unmet guard conditions
                 // Guard functions are executed here
+                /*
                 var actual = possible
                     .Select(h => new TriggerBehaviourResult(h, h.UnmetGuardConditions(args)))
                     .Where(g => g.UnmetGuardConditions.Count == 0)
                     .ToArray();
+                */
+                GARBAGELESS_TryFindLocalHandler.Clear();
+                foreach (var tb in possible)
+                {
+                    var tbr = new TriggerBehaviourResult(tb, tb.UnmetGuardConditions(args));
+                    if (tbr.UnmetGuardConditions.Count == 0)
+                    {
+                        GARBAGELESS_TryFindLocalHandler.Add(tbr);
+                    }
+                }
+                ////
 
                 // Find a handler for the trigger
-                handlerResult = TryFindLocalHandlerResult(trigger, actual, r => !r.UnmetGuardConditions.Any())
-                    ?? TryFindLocalHandlerResult(trigger, actual, r => r.UnmetGuardConditions.Any());
+                handlerResult = TryFindLocalHandlerResult(trigger, GARBAGELESS_TryFindLocalHandler, HasNoUnmetGuardConditions)
+                    ?? TryFindLocalHandlerResult(trigger, GARBAGELESS_TryFindLocalHandler, HasUnmetGuardConditions);
 
                 if (handlerResult == null) return false;
 
+                /*
                 return !handlerResult.UnmetGuardConditions.Any();
+                */
+                return HasNoUnmetGuardConditions(handlerResult);
             }
 
-            TriggerBehaviourResult TryFindLocalHandlerResult(TTrigger trigger, IEnumerable<TriggerBehaviourResult> results, Func<TriggerBehaviourResult, bool> filter)
+            private bool HasUnmetGuardConditions(TriggerBehaviourResult tbr)
             {
+                //for (int i = 0; i < tbr.UnmetGuardConditions.Count; i++)
+                foreach (var c in tbr.UnmetGuardConditions)
+                {
+                    //string c = tbr.UnmetGuardConditions[i];
+                    if (!string.IsNullOrWhiteSpace(c))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            private bool HasNoUnmetGuardConditions(TriggerBehaviourResult tbr)
+            {
+                return !HasUnmetGuardConditions(tbr);
+            }
+
+            private readonly List<TriggerBehaviourResult> GARBAGELESS_TryFindLocalHandlerResult = new List<TriggerBehaviourResult>();
+
+            TriggerBehaviourResult TryFindLocalHandlerResult(TTrigger trigger, List<TriggerBehaviourResult> results, Func<TriggerBehaviourResult, bool> filter)
+            {
+                /*
                 var actual = results
                     .Where(filter);
+                */
+                GARBAGELESS_TryFindLocalHandlerResult.Clear();
+                foreach (var tbr in results)
+                {
+                    if (filter(tbr))
+                    {
+                        GARBAGELESS_TryFindLocalHandlerResult.Add(tbr);
+                    }
+                }
+                ////
 
-                if (actual.Count() > 1)
+                if (GARBAGELESS_TryFindLocalHandlerResult.Count > 1)
                     throw new InvalidOperationException(
                         string.Format(StateRepresentationResources.MultipleTransitionsPermitted,
                         trigger, _state));
 
-                return actual
-                    .FirstOrDefault();
+                /*
+                return actual.FirstOrDefault();
+                */
+                return GARBAGELESS_TryFindLocalHandlerResult.Count == 0 ? null : GARBAGELESS_TryFindLocalHandlerResult[0];
             }
+
             public void AddActivateAction(Action action, Reflection.InvocationInfo activateActionDescription)
             {
                 ActivateActions.Add(new ActivateActionBehaviour.Sync(_state, action, activateActionDescription));
@@ -231,7 +283,7 @@ namespace Stateless
             }
             public void AddTriggerBehaviour(TriggerBehaviour triggerBehaviour)
             {
-                if (!TriggerBehaviours.TryGetValue(triggerBehaviour.Trigger, out ICollection<TriggerBehaviour> allowed))
+                if (!TriggerBehaviours.TryGetValue(triggerBehaviour.Trigger, out List<TriggerBehaviour> allowed))
                 {
                     allowed = new List<TriggerBehaviour>();
                     TriggerBehaviours.Add(triggerBehaviour.Trigger, allowed);

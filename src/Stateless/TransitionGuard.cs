@@ -8,7 +8,7 @@ namespace Stateless
     {
         internal class TransitionGuard
         {
-            internal IList<GuardCondition> Conditions { get; }
+            internal List<GuardCondition> Conditions { get; }
 
             public static readonly TransitionGuard Empty = new TransitionGuard(new Tuple<Func<object[],bool>, string>[0]);
 
@@ -90,7 +90,7 @@ namespace Stateless
             /// <summary>
             /// Guards is the list of the guard functions for all guard conditions for this transition
             /// </summary>
-            internal ICollection<Func<object[], bool>> Guards => Conditions.Select(g => g.Guard).ToList();
+            internal List<Func<object[], bool>> Guards => Conditions.Select(g => g.Guard).ToList();
 
             /// <summary>
             /// GuardConditionsMet is true if all of the guard functions return true
@@ -101,16 +101,39 @@ namespace Stateless
                 return Conditions.All(c => c.Guard == null || c.Guard(args));
             }
 
+            private static readonly List<string> EMPTY_LIST = new List<string>();
+            private readonly List<string> GARBAGELESS_UnmetGuardConditions = new List<string>();
+
             /// <summary>
             /// UnmetGuardConditions is a list of the descriptions of all guard conditions
             /// whose guard function returns false
             /// </summary>
-            public ICollection<string> UnmetGuardConditions(object[] args)
+            public List<string> UnmetGuardConditions(object[] args)
             {
+                if (Conditions.Count == 0)
+                {
+                    if (EMPTY_LIST.Count != 0)
+                    {
+                        throw new Exception("Something wrote to the empty list used by UnmetGuardConditions!");
+                    }
+                    return EMPTY_LIST;
+                }
+
+                /*
                 return Conditions
                     .Where(c => !c.Guard(args))
                     .Select(c => c.Description)
                     .ToList();
+                */
+                GARBAGELESS_UnmetGuardConditions.Clear();
+                foreach (var c in Conditions)
+                {
+                    if (!c.Guard(args))
+                    {
+                        GARBAGELESS_UnmetGuardConditions.Add(c.Description);
+                    }
+                }
+                return GARBAGELESS_UnmetGuardConditions;
             }
         }
     }

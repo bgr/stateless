@@ -260,7 +260,7 @@ namespace Stateless
         /// is fired.
         /// </summary>
         /// <param name="unhandledTriggerAction">An asynchronous action to call when an unhandled trigger is fired.</param>
-        public void OnUnhandledTriggerAsync(Func<TState, TTrigger, ICollection<string>, Task> unhandledTriggerAction)
+        public void OnUnhandledTriggerAsync(Func<TState, TTrigger, List<string>, Task> unhandledTriggerAction)
         {
             if (unhandledTriggerAction == null) throw new ArgumentNullException(nameof(unhandledTriggerAction));
             _unhandledTriggerAction = new UnhandledTriggerAction.Async(unhandledTriggerAction);
