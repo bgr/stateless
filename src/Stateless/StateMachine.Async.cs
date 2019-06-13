@@ -136,7 +136,7 @@ namespace Stateless
         {
             if (_firing)
             {
-                _eventQueue.Enqueue(new QueuedTrigger { Trigger = trigger, Args = args });
+                _eventQueue.Enqueue(new QueuedTrigger { trigger = trigger, args = args });
                 return;
             }
 
@@ -149,7 +149,7 @@ namespace Stateless
                 while (_eventQueue.Count != 0)
                 {
                     var queuedEvent = _eventQueue.Dequeue();
-                    await InternalFireOneAsync(queuedEvent.Trigger, queuedEvent.Args).ConfigureAwait(false);
+                    await InternalFireOneAsync(queuedEvent.trigger, queuedEvent.args).ConfigureAwait(false);
                 }
             }
             finally
@@ -169,17 +169,17 @@ namespace Stateless
             // Try to find a trigger handler, either in the current state or a super state.
             if (!representativeState.TryFindHandler(trigger, args, out var result))
             {
-                await _unhandledTriggerAction.ExecuteAsync(representativeState.UnderlyingState, trigger, result?.UnmetGuardConditions).ConfigureAwait(false);
+                await _unhandledTriggerAction.ExecuteAsync(representativeState.UnderlyingState, trigger, result?.unmetGuardConditions).ConfigureAwait(false);
                 return;
             }
             // Check if this trigger should be ignored
-            if (result.Handler is IgnoredTriggerBehaviour)
+            if (result.handler is IgnoredTriggerBehaviour)
             {
                 return;
             }
 
             // Handle special case, re-entry in superstate
-            if (result.Handler is ReentryTriggerBehaviour handler)
+            if (result.handler is ReentryTriggerBehaviour handler)
             {
                 // Handle transition, and set new state
                 var transition = new Transition(source, handler.Destination, trigger);
@@ -199,7 +199,7 @@ namespace Stateless
                 await newRepresentation.EnterAsync(transition, args);
             }
             // Check if it is an internal transition, or a transition from one state to another.
-            else if (result.Handler.ResultsInTransitionFrom(source, args, out var destination))
+            else if (result.handler.ResultsInTransitionFrom(source, args, out var destination))
             {
                 var transition = new Transition(source, destination, trigger);
 

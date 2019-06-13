@@ -144,7 +144,7 @@ namespace Stateless
                     if (aStateRep.TryFindLocalHandler(transition.Trigger, args, out TriggerBehaviourResult result))
                     {
                         // Trigger handler(s) found in this state
-                        internalTransition = result.Handler as InternalTriggerBehaviour;
+                        internalTransition = result.handler as InternalTriggerBehaviour;
                         break;
                     }
                     // Try to look for trigger handlers in superstate (if it exists)

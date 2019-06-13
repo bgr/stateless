@@ -31,10 +31,10 @@ namespace Stateless
         private OnTransitionedEvent _onTransitionedEvent;
         private readonly FiringMode _firingMode;
 
-        private class QueuedTrigger
+        private struct QueuedTrigger
         {
-            public TTrigger Trigger { get; set; }
-            public object[] Args { get; set; }
+            public TTrigger trigger;
+            public object[] args;
         }
 
         private readonly Queue<QueuedTrigger> _eventQueue = new Queue<QueuedTrigger>();
@@ -311,7 +311,7 @@ namespace Stateless
             // If a trigger is already being handled then the trigger will be queued (FIFO) and processed later.
             if (_firing)
             {
-                _eventQueue.Enqueue(new QueuedTrigger { Trigger = trigger, Args = args });
+                _eventQueue.Enqueue(new QueuedTrigger { trigger = trigger, args = args });
                 return;
             }
 
@@ -325,7 +325,7 @@ namespace Stateless
                 while (_eventQueue.Count != 0)
                 {
                     var queuedEvent = _eventQueue.Dequeue();
-                    InternalFireOne(queuedEvent.Trigger, queuedEvent.Args);
+                    InternalFireOne(queuedEvent.trigger, queuedEvent.args);
                 }
             }
             finally
@@ -352,11 +352,11 @@ namespace Stateless
             // Try to find a trigger handler, either in the current state or a super state.
             if (!representativeState.TryFindHandler(trigger, args, out TriggerBehaviourResult result))
             {
-                _unhandledTriggerAction.Execute(representativeState.UnderlyingState, trigger, result?.UnmetGuardConditions);
+                _unhandledTriggerAction.Execute(representativeState.UnderlyingState, trigger, result?.unmetGuardConditions);
                 return;
             }
 
-            switch (result.Handler)
+            switch (result.handler)
             {
                 // Check if this trigger should be ignored
                 case IgnoredTriggerBehaviour _:
@@ -370,7 +370,7 @@ namespace Stateless
                         HandleReentryTrigger(args, representativeState, transition);
                         break;
                     }
-                case DynamicTriggerBehaviour _ when (result.Handler.ResultsInTransitionFrom(source, args, out TState destination)):
+                case DynamicTriggerBehaviour _ when (result.handler.ResultsInTransitionFrom(source, args, out TState destination)):
                 {
                     // Handle transition, and set new state
                     var transition = new Transition(source, destination, trigger);
@@ -379,7 +379,7 @@ namespace Stateless
 
                     break;
                 }
-                case TransitioningTriggerBehaviour _ when (result.Handler.ResultsInTransitionFrom(source, args, out TState destination)):
+                case TransitioningTriggerBehaviour _ when (result.handler.ResultsInTransitionFrom(source, args, out TState destination)):
                     {
                         // Handle transition, and set new state
                         var transition = new Transition(source, destination, trigger);

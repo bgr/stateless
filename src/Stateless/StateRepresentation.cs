@@ -63,10 +63,12 @@ namespace Stateless
                     .ToArray();
                 */
                 GARBAGELESS_TryFindLocalHandler.Clear();
+                //for (int i = 0; i < possible.Count; i++)
                 foreach (var tb in possible)
                 {
-                    var tbr = new TriggerBehaviourResult(tb, tb.UnmetGuardConditions(args));
-                    if (tbr.UnmetGuardConditions.Count == 0)
+                    //var tb = possible[i];
+                    var tbr = TriggerBehaviourResult.Get(tb, tb.UnmetGuardConditions(args));
+                    if (tbr.unmetGuardConditions.Count == 0)
                     {
                         GARBAGELESS_TryFindLocalHandler.Add(tbr);
                     }
@@ -76,6 +78,11 @@ namespace Stateless
                 // Find a handler for the trigger
                 handlerResult = TryFindLocalHandlerResult(trigger, GARBAGELESS_TryFindLocalHandler, HasNoUnmetGuardConditions)
                     ?? TryFindLocalHandlerResult(trigger, GARBAGELESS_TryFindLocalHandler, HasUnmetGuardConditions);
+                /*handlerResult = TryFindLocalHandlerResult(trigger, GARBAGELESS_TryFindLocalHandler, HasNoUnmetGuardConditions);
+                if (!handlerResult)
+                {
+                    handlerResult = TryFindLocalHandlerResult(trigger, GARBAGELESS_TryFindLocalHandler, HasUnmetGuardConditions);
+                }*/
 
                 if (handlerResult == null) return false;
 
@@ -88,7 +95,7 @@ namespace Stateless
             private bool HasUnmetGuardConditions(TriggerBehaviourResult tbr)
             {
                 //for (int i = 0; i < tbr.UnmetGuardConditions.Count; i++)
-                foreach (var c in tbr.UnmetGuardConditions)
+                foreach (var c in tbr.unmetGuardConditions)
                 {
                     //string c = tbr.UnmetGuardConditions[i];
                     if (!string.IsNullOrWhiteSpace(c))
@@ -267,10 +274,10 @@ namespace Stateless
                     if (aStateRep.TryFindLocalHandler(transition.Trigger, args, out TriggerBehaviourResult result))
                     {
                         // Trigger handler found in this state
-                        if (result.Handler is InternalTriggerBehaviour.Async)
+                        if (result.handler is InternalTriggerBehaviour.Async)
                             throw new InvalidOperationException("Running Async internal actions in synchronous mode is not allowed");
 
-                        internalTransition = result.Handler as InternalTriggerBehaviour.Sync;
+                        internalTransition = result.handler as InternalTriggerBehaviour.Sync;
                         break;
                     }
                     // Try to look for trigger handlers in superstate (if it exists)
